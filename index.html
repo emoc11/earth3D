@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Earth</title>
+</head>
+<body>
+
+	<style>
+		body {
+			padding: 0;
+			margin: 0;
+			overflow: hidden;
+		}
+
+		#earth {
+			width: 100vw;
+			height: 100vh;
+			background: white;
+		}
+
+		nav {
+			position: absolute;
+			top: 10px;
+			left: 10px;
+			background: white;
+			padding: 10px 20px;
+		}
+
+		nav ul {
+			list-style-type: none;
+			padding: 0;
+			margin: 0;
+		}
+
+		nav li {
+			cursor: pointer;
+			padding: 0;
+			margin: 0;
+		}
+
+		nav li + li {
+			margin-top: 10px;
+		}
+	</style>
+
+	<nav>
+		<ul>
+			<li class="backToAutoRotate">Rotation automatique</li>
+			<li class="city">Paris</li>
+			<li class="city">New-York</li>
+			<li class="city">New Delhi</li>
+			<li class="city">los angeles</li>
+			<li class="city">Toulouse</li>
+			<li class="city">Chennai</li>
+			<li class="city">Madras</li>
+		</ul>
+	</nav>
+
+	<div id="earth"></div>
+
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/86/three.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/1.19.1/TweenMax.min.js"></script>
+	<script type="text/javascript" src="js/orbitControls.js"></script>
+	<script type="text/javascript" src="js/main.js"></script>
+</body>
+</html>
