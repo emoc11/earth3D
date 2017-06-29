@@ -54,15 +54,16 @@ $(function() {
 	container.appendChild(renderer.domElement);
 
 	// Set up the sphere vars
+	var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length)) * 3;
 	var RADIUS = 50;
-	var SEGMENTS = 8;
-	var RINGS = 8;
+	var SEGMENTS = faceNumberForDatas;
+	var RINGS = faceNumberForDatas;
 	var DETAILS = 2;
 
 	// Create a new mesh with
 	// sphere geometry
 	var textureLoader = new THREE.TextureLoader();
-	var mainGeom = new THREE.IcosahedronGeometry(RADIUS, DETAILS);
+	var mainGeom = new THREE.SphereGeometry(RADIUS, SEGMENTS, RINGS);
 	var mainMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0, depthWrite: false });
 
 	sphere = new THREE.Mesh(mainGeom, mainMaterial);
@@ -70,7 +71,7 @@ $(function() {
 	// Move the Sphere back in Z so we
 	// can see it.
 	sphere.position.z = -190;
-	sphere.rotation.x = 90 * Math.PI / 180;
+	sphere.rotation.x = 0;
 	sphere.rotation.y = 0;
 
 	// Mouse orbit control
@@ -108,7 +109,7 @@ $(function() {
 	function update () {
 		requestAnimationFrame(update);
 
-		sphere.rotation.z += 1/32 * 0.01;
+		sphere.rotation.y -= 1/32 * 0.01;
 
 		// if (WAIT_BEFORE_ROTATE <= 0) {
 		// 	sphere.rotation.z += 1/32 * 0.01;
@@ -181,18 +182,18 @@ $(function() {
 
 	function niceLatitude(lat) {
 		if(lat > 90) {
-			lat = -(Math.trunc((lat/90)) * 90) + Math.abs(90 - lat);
+			lat = Math.trunc((-(Math.trunc((lat/90)) * 90 + 90) + Math.abs(90 - lat))/90) * 90;
 		} else if(lat < -90) {
-			lat = (Math.trunc((lat/90)) * 90) - Math.abs(lat + 90);
+			lat = (Math.trunc((lat/90)) * 90 + 90) - Math.abs(lat + 90);
 		}
 		return lat;
 	}
 
 	function niceLongitude(lon) {
 		if(lon > 180) {
-			lon = -(Math.trunc((lon/180)) * 180) + Math.abs(180 - lon);
+			lon = -(Math.trunc((lon/180)) * 180 + 180) + Math.abs(180 - lon);
 		} else if(lon < -180) {
-			lon = (Math.trunc((lon/180)) * 180) - Math.abs(lon + 180);
+			lon = (Math.trunc((lon/180)) * 180 + 180) - Math.abs(lon + 180);
 		}
 		return lon;
 	}
@@ -247,75 +248,58 @@ $(function() {
 			Math.cos(lat) * Math.sin(lon));
 	}
 
-	function placeMarker(localisation, obj) {
-		var latLon = localisation.split(",");
-		var lat = parseFloat(latLon[0]);
-		var lon = parseFloat(latLon[1]);
+	sphereFaceUsed = [];
 
-		var latLonPos = latLongToVec3(lat, lon);
-		latLonPos.multiplyScalar(RADIUS);
+	function findSphereFaceNumber(objType) {
+		var rand = Math.trunc(Math.random() * sphere.geometry.faces.length);
+		var randLess = rand - 5;
+		var randMore = rand + 5;
+		if(randLess < 0) randLess = 0;
+		if(randMore > sphere.geometry.faces.length) randMore = sphere.geometry.faces.length-1;
 
+		for (var i = randLess; i < randMore; i++) {
+			if (objType == sphere.geometry.faces[i].type) {
+				return findSphereFaceNumber(objType);
+			}
+		}
+		if(!sphereFaceUsed.includes(rand)) {
+			sphereFaceUsed.push(rand);
+			return rand;
+		} else {
+			return findSphereFaceNumber(objType);
+		}
+	}
+
+	function placeMarker(obj) {
 		var pinColor = new THREE.Color(obj.color);
 
 		var markerGeom = new THREE.Geometry();
+		var RandFace = findSphereFaceNumber(obj.type);
 
-		for (var i = 3 - 1; i >= 0; i--) {
+		// Add type to this face
+		sphere.geometry.faces[RandFace].type = obj.type;
+		var copiedVertexs = sphere.geometry.faces[RandFace].vertexNormals;
 
-			var vector;
-
-			// BASE
-			// if(i == 2) {
-			// 	vector = new THREE.Vector3(0,0,0);
-			// } else if (i == 1) {
-			// 	vector = new THREE.Vector3(x,0,0);
-			// } else {
-			// 	vector = new THREE.Vector3(x,y,0);
-			// }
-
-			var newLat, newLon;
-			var Rand = 320;
-			console.log('BEFORE lat', lat);
-			console.log('BEFORE lon', lon);
-			if(i == 2) {
-				newLat = niceLatitude(lat + Rand);
-				newLon = niceLongitude(lon + Rand);
-				console.log('AFTER lat', newLat);
-				console.log('AFTER lon', newLon);
-				vector = latLongToVec3(newLat, newLon);
-			} else if (i == 1) {
-				newLat = niceLatitude(lat + Rand);
-				newLon = niceLongitude(lon - Rand);
-				console.log('AFTER lat', newLat);
-				console.log('AFTER lon', newLon);
-				vector = latLongToVec3(newLat, newLon);
-			} else {
-				newLat = niceLatitude(lat - Rand);
-				newLon = niceLongitude(lon + Rand);
-				console.log('AFTER lat', newLat);
-				console.log('AFTER lon', newLon);
-				vector = latLongToVec3(newLat, newLon);
-			}
-			console.log("=========");
-
+		for (var i = 0; i < copiedVertexs.length; i++) {
+			var vertex = copiedVertexs[i].clone();
+			var vector = new THREE.Vector3(vertex.x, vertex.y, vertex.z).multiplyScalar(RADIUS);
 			markerGeom.vertices.push(vector);
-		};
-
+		}
 		markerGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
 		markerGeom.computeFaceNormals();
-
 		var marker = new THREE.Mesh(
 			markerGeom,
-			new THREE.MeshLambertMaterial({color: pinColor,transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide})
+			new THREE.MeshLambertMaterial({color: pinColor, wireframe: true,transparent: true, opacity: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1})
 		);
-		marker.scale.set( 3,3,3 );
-
-		// var marker = new THREE.Mesh(
-		// 	new THREE.PlaneGeometry(5,5,16),
-		// 	new THREE.MeshLambertMaterial({color: pinColor, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide})
-		// );
 		marker.type = obj.type;
 
-		// marker.position.copy(latLonPos);
+		// Register good position on sphere
+		var destPos = {};
+		destPos.x = marker.position.x;
+		destPos.y = marker.position.y;
+		destPos.z = marker.position.z;
+
+		// Change position for random
 		marker.position.x = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
 		marker.position.y = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
 		marker.position.z = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
@@ -326,13 +310,13 @@ $(function() {
 		marker.baseLoc.z = marker.position.z;
 
 		marker.sphereLoc = {};
-		marker.sphereLoc.x = latLonPos.x;
-		marker.sphereLoc.y = latLonPos.y;
-		marker.sphereLoc.z = latLonPos.z;
+		marker.sphereLoc.x = destPos.x;
+		marker.sphereLoc.y = destPos.y;
+		marker.sphereLoc.z = destPos.z;
 
 		sphere.add(marker);
-		var speedAnim = Math.random() * 2 + .5;
-		TweenMax.to(marker.position, speedAnim/2, {x: latLonPos.x, y:latLonPos.y, z:latLonPos.z, ease:Quad.easeOut, delay: speedAnim/8});
+		var speedAnim = Math.random() * 2 + 1;
+		TweenMax.to(marker.position, speedAnim/2, {x: destPos.x, y:destPos.y, z:destPos.z, ease:Quad.easeOut, delay: speedAnim/8});
 		TweenMax.to(marker.material, speedAnim/2, {opacity: 1, ease:Quad.easeOut});
 		clicableObjects.push(marker);
 	}
@@ -352,7 +336,7 @@ $(function() {
 				break;
 		}
 
-		placeMarker(latlong, datas[i]);
+		placeMarker(datas[i]);
 	});
 
 	$("nav li").bind("click", function() {
@@ -363,28 +347,28 @@ $(function() {
 
 	function doOutAnim() {
 		// EXPLOSION ANIM, comme pour apparaitre en sens inverse
-		// $.each(sphere.children, function() {
-		// 	var speedAnim = Math.random() * 2 + .5;
-		// 	TweenMax.to(this.position, speedAnim, {x: this.baseLoc.x, y: this.baseLoc.y, z: this.baseLoc.z, ease:Quad.easeOut});
-		// 	TweenMax.to(this.material, speedAnim/2, {opacity: 0, ease:Quad.easeOut, delay: speedAnim/2});
-		// });
+		$.each(sphere.children, function() {
+			var speedAnim = Math.random() * 2 + 1;
+			TweenMax.to(this.position, speedAnim, {x: this.baseLoc.x, y: this.baseLoc.y, z: this.baseLoc.z, ease:Quad.easeOut});
+			TweenMax.to(this.material, speedAnim/2, {opacity: 0, ease:Quad.easeOut, delay: speedAnim/4});
+		});
 
 		// SPHERE SCALE + ROTATION -> transition
-		var newScale = 2.8;
-		if(sphere.rotation.x == 90 * Math.PI / 180 && sphere.rotation.y == 0) {
-			TweenMax.to(sphere.scale, .8, {x: newScale, y: newScale, z: newScale, ease:Quad.easeInOut});
-			TweenMax.to(sphere.rotation, .8, {z: "+=2", ease:Quad.easeInOut});
-			$.each(sphere.children, function() {
-				TweenMax.to(this.material, .8/2, {opacity: 0, ease:Quad.easeOut, delay: .8/4});
-			});
-		} else {
-			TweenMax.to(sphere.rotation, .6, {x: 90 * Math.PI / 180, y: 0, ease:Quad.easeInOut});
-			TweenMax.to(sphere.scale, .8, {x: newScale, y: newScale, z: newScale, ease:Quad.easeInOut, delay: .5});
-			TweenMax.to(sphere.rotation, .8, {z: "+=2", ease:Quad.easeInOut, delay: .5});
-			$.each(sphere.children, function() {
-				TweenMax.to(this.material, .8/2, {opacity: 0, ease:Quad.easeOut, delay: .8/4+.5});
-			});
-		}
+		// var newScale = 2.8;
+		// if(sphere.rotation.x == 90 * Math.PI / 180 && sphere.rotation.y == 0) {
+		// 	TweenMax.to(sphere.scale, .8, {x: newScale, y: newScale, z: newScale, ease:Quad.easeInOut});
+		// 	TweenMax.to(sphere.rotation, .8, {z: "+=2", ease:Quad.easeInOut});
+		// 	$.each(sphere.children, function() {
+		// 		TweenMax.to(this.material, .8/2, {opacity: 0, ease:Quad.easeOut, delay: .8/4});
+		// 	});
+		// } else {
+		// 	TweenMax.to(sphere.rotation, .6, {x: 90 * Math.PI / 180, y: 0, ease:Quad.easeInOut});
+		// 	TweenMax.to(sphere.scale, .8, {x: newScale, y: newScale, z: newScale, ease:Quad.easeInOut, delay: .5});
+		// 	TweenMax.to(sphere.rotation, .8, {z: "+=2", ease:Quad.easeInOut, delay: .5});
+		// 	$.each(sphere.children, function() {
+		// 		TweenMax.to(this.material, .8/2, {opacity: 0, ease:Quad.easeOut, delay: .8/4+.5});
+		// 	});
+		// }
 
 	}
 
@@ -428,7 +412,19 @@ $(function() {
 		if ( intersects.length > 0 ) {
 
 			// Si clic sur pin -> direction sur la pin
-			// changeLocalisation(intersects[ 0 ].object.loc);
+			if(intersects[ 0 ].object.material.wireframe) {
+				intersects[ 0 ].object.material.wireframe = false;
+			} else {
+				intersects[ 0 ].object.material.wireframe = true;
+			}
+
+			var clickedType = intersects[ 0 ].object.type;
+			var hidedItem = [];
+			$.each(sphere.children, function() {
+				if(clickedType != this.type) {
+					TweenMax.to(this.position, 1, {ease:Quad.easeOut})
+				}
+			});
 		}
 	}
 
