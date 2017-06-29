@@ -171,12 +171,30 @@ $(function() {
 	}
 
 	function niceDegree(deg) {
-		if(deg >= 360) {
+		if(deg > 360) {
 			deg = deg - (Math.trunc((deg/360)) * 360);
 		} else if(deg < 0) {
 			deg = 360 + (deg + ((Math.trunc(Math.abs(deg)/360)) * 360));
 		}
 		return deg;
+	}
+
+	function niceLatitude(lat) {
+		if(lat > 90) {
+			lat = -(Math.trunc((lat/90)) * 90) + Math.abs(90 - lat);
+		} else if(lat < -90) {
+			lat = (Math.trunc((lat/90)) * 90) - Math.abs(lat + 90);
+		}
+		return lat;
+	}
+
+	function niceLongitude(lon) {
+		if(lon > 180) {
+			lon = -(Math.trunc((lon/180)) * 180) + Math.abs(180 - lon);
+		} else if(lon < -180) {
+			lon = (Math.trunc((lon/180)) * 180) - Math.abs(lon + 180);
+		}
+		return lon;
 	}
 
 	function latLongToVec3 ( lat, lon ) {
@@ -231,18 +249,70 @@ $(function() {
 
 	function placeMarker(localisation, obj) {
 		var latLon = localisation.split(",");
-		var lat = latLon[0];
-		var lon = latLon[1];
+		var lat = parseFloat(latLon[0]);
+		var lon = parseFloat(latLon[1]);
 
 		var latLonPos = latLongToVec3(lat, lon);
 		latLonPos.multiplyScalar(RADIUS);
 
 		var pinColor = new THREE.Color(obj.color);
 
+		var markerGeom = new THREE.Geometry();
+
+		for (var i = 3 - 1; i >= 0; i--) {
+
+			var vector;
+
+			// BASE
+			// if(i == 2) {
+			// 	vector = new THREE.Vector3(0,0,0);
+			// } else if (i == 1) {
+			// 	vector = new THREE.Vector3(x,0,0);
+			// } else {
+			// 	vector = new THREE.Vector3(x,y,0);
+			// }
+
+			var newLat, newLon;
+			var Rand = 320;
+			console.log('BEFORE lat', lat);
+			console.log('BEFORE lon', lon);
+			if(i == 2) {
+				newLat = niceLatitude(lat + Rand);
+				newLon = niceLongitude(lon + Rand);
+				console.log('AFTER lat', newLat);
+				console.log('AFTER lon', newLon);
+				vector = latLongToVec3(newLat, newLon);
+			} else if (i == 1) {
+				newLat = niceLatitude(lat + Rand);
+				newLon = niceLongitude(lon - Rand);
+				console.log('AFTER lat', newLat);
+				console.log('AFTER lon', newLon);
+				vector = latLongToVec3(newLat, newLon);
+			} else {
+				newLat = niceLatitude(lat - Rand);
+				newLon = niceLongitude(lon + Rand);
+				console.log('AFTER lat', newLat);
+				console.log('AFTER lon', newLon);
+				vector = latLongToVec3(newLat, newLon);
+			}
+			console.log("=========");
+
+			markerGeom.vertices.push(vector);
+		};
+
+		markerGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+		markerGeom.computeFaceNormals();
+
 		var marker = new THREE.Mesh(
-			new THREE.SphereGeometry(.5,16,16),
-			new THREE.MeshLambertMaterial({color: pinColor, transparent: true, opacity: 0, depthWrite: false})
+			markerGeom,
+			new THREE.MeshLambertMaterial({color: pinColor,transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide})
 		);
+		marker.scale.set( 3,3,3 );
+
+		// var marker = new THREE.Mesh(
+		// 	new THREE.PlaneGeometry(5,5,16),
+		// 	new THREE.MeshLambertMaterial({color: pinColor, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide})
+		// );
 		marker.type = obj.type;
 
 		// marker.position.copy(latLonPos);
@@ -266,7 +336,8 @@ $(function() {
 		TweenMax.to(marker.material, speedAnim/2, {opacity: 1, ease:Quad.easeOut});
 		clicableObjects.push(marker);
 	}
-	var dataCount = datas.length;
+
+
 	$.each(datas, function(i) {
 		var latlong = getPosition();
 		switch(datas[i].type) {
