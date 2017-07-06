@@ -50,7 +50,7 @@ $(function() {
 	// sphere geometry
 	var textureLoader = new THREE.TextureLoader();
 	var mainGeom = new THREE.SphereGeometry(RADIUS, SEGMENTS, RINGS);
-	var mainMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.0, depthWrite: false });
+	var mainMaterial = new THREE.MeshBasicMaterial({ color: 0x0000FF, transparent: true, opacity: 0.0, depthWrite: false, wireframe:false });
 
 	sphere = new THREE.Mesh(mainGeom, mainMaterial);
 
@@ -156,18 +156,19 @@ $(function() {
 	function placePoint(position) {
 		var randRadius = Math.random() * 0.2 + 0.5;
 		var pointGeom = new THREE.SphereGeometry(randRadius, SEGMENTS, RINGS);
-		var randColor = Math.round(Math.random() * 2+1);
-		switch(randColor) {
-			case 1:
-				randColor = 0xff0000;
-				break;
-			case 2:
-				randColor = 0x00ff00;
-				break;
-			case 3:
-				randColor = 0x0000ff;
-				break;
-		}
+		// var randColor = Math.round(Math.random() * 2+1);
+		// switch(randColor) {
+		// 	case 1:
+		// 		randColor = 0xff0000;
+		// 		break;
+		// 	case 2:
+		// 		randColor = 0x00ff00;
+		// 		break;
+		// 	case 3:
+		// 		randColor = 0x0000ff;
+		// 		break;
+		// }
+		randColor = 0x0000FF;
 		var pointMaterial = new THREE.MeshPhongMaterial({ color: randColor, depthWrite: true, shininess: 0, transparent: false });
 
 		newPoint = new THREE.Mesh(pointGeom, pointMaterial);
@@ -177,30 +178,33 @@ $(function() {
 	}
 
 	function linkPointToPoint(pos1, pos2) {
-		// var lineMaterial = new THREE.LineBasicMaterial({color: 0xFFFFFF});
-		// var lineGeom = new THREE.Geometry();
-		// lineGeom.vertices.push(pos1);
-		// lineGeom.vertices.push(pos2);
-
-		// newLine = new THREE.Line(lineGeom, lineMaterial);
-		// sphere.add(newLine);
-
-		var all_lines = [];
+		var lineCounter = 1;
+		var lineDistanceMax = 0;
 		for (var i = 0; i < all_points.length; i++) {
 			var startPoint = all_points[i].position;
+
+			if(i%32 == 0 && i <= all_points.length) {
+				if(lineCounter <= 16) {
+					lineDistanceMax = (RADIUS/4) - ((16-lineCounter)*0.62);
+				} else if (lineCounter > 16) {
+					lineDistanceMax = (RADIUS/4) + ((16-lineCounter)*0.62);
+				}
+				console.log(lineDistanceMax);
+				// lineDistanceMax = 5 - (16-lineCounter);
+				lineCounter += 1;
+			}
 
 			for (var f = 0; f < all_points.length; f++) {
 				var endPoint = all_points[f].position;
 
-				if(startPoint.distanceTo( endPoint ) <= (RADIUS/2) && all_lines[i] != f) {
-					var lineMaterial = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+				if(startPoint.distanceTo( endPoint ) <= lineDistanceMax) {
+					var lineMaterial = new THREE.LineBasicMaterial({color: 0x000000});
 					var lineGeom = new THREE.Geometry();
 					lineGeom.vertices.push(startPoint);
 					lineGeom.vertices.push(endPoint);
 
 					newLine = new THREE.Line(lineGeom, lineMaterial);
 					sphere.add(newLine);
-					all_lines[i] = f;
 				}
 			}
 		}
@@ -307,58 +311,13 @@ $(function() {
 	// 	placeMarker(datas[i]);
 	// });
 
-	$("nav li").bind("click", function() {
-		var typeToShow = $(this).attr("data-type");
-
-		filterMarker(typeToShow);
-	});
-
-	function filter(clickedType) {
-		// EXPLOSION ANIM, comme pour apparaitre en sens inverse
-		$.each(sphere.children, function() {
-			if(clickedType != this.type) {
-				if(this.material.opacity == 1) {
-					var item = this;
-					TweenMax.to(this.position, 1, {x:item.baseLoc.x, y:item.baseLoc.y, z:item.baseLoc.z, ease:Quad.easeOut});
-					TweenMax.to(this.material, 1, {opacity:0, ease:Quad.easeOut});
-				} else {
-					var item = this;
-					TweenMax.to(this.position, 1, {x:item.sphereLoc.x, y:item.sphereLoc.y, z:item.sphereLoc.z, ease:Quad.easeOut});
-					TweenMax.to(this.material, 1, {opacity:1, ease:Quad.easeOut});
-				}
-			}
-		});
-
-	}
-
-	function filterMarker(typeToShow) {
-		if(typeToShow != "all" && typeToShow != "outAnim") {
-			$.each(sphere.children, function() {
-				if(this.type != typeToShow) {
-					TweenMax.to(this.material, .2, {opacity: 0, ease:Quad.easeOut});
-				} else {
-					TweenMax.to(this.material, .2, {opacity: 1, ease:Quad.easeOut});
-				}
-			});
-		} else if (typeToShow == "outAnim") {
-			filter("noone");
-		} else if (typeToShow == "all") {
-			filter("all");
-		}
-	}
-
 	var raycaster,mouse;
-
 	raycaster = new THREE.Raycaster();
 	mouse = new THREE.Vector2();
 
-	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+	document.addEventListener( 'mouseup', onDocumentMouseDown, false );
 	function onDocumentMouseDown(event) {
 		event.preventDefault();
-		MOUSE_IS_DOWN = true;
-
-		MOUSECLIC_X = event.clientX;
-		MOUSECLIC_Y = event.clientY;
 
 		mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
 		mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
@@ -369,15 +328,8 @@ $(function() {
 		if ( intersects.length > 0 ) {
 
 			// Si clic sur pin -> direction sur la pin
-			var clickedType = intersects[ 0 ].object.type;
-			filter(clickedType);
-
-			// FILL CLICKED OBJECT
-			// if(intersects[ 0 ].object.material.wireframe) {
-			// 	intersects[ 0 ].object.material.wireframe = false;
-			// } else {
-			// 	intersects[ 0 ].object.material.wireframe = true;
-			// }
+			var obj = intersects[ 0 ];
+			console.log(obj);
 		}
 	}
 
