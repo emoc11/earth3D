@@ -102,6 +102,23 @@ $(function() {
 	// var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
 	// scene.add(spotLight);
 
+	// Add Point sphere vertice
+	var all_points = [];
+	for (var i = 0; i < sphere.geometry.vertices.length; i++) {
+		var randPoint = Math.round(Math.random());
+		if( randPoint == 1) {
+			placePoint(sphere.geometry.vertices[i]);
+		}
+	}
+	// all_points[100].material.color = new THREE.Color(0xFF0000);
+	console.log(all_points);
+
+	// Link each vertice to others
+	linkPointToPoint();
+	// for (var i = 1; i < sphere.geometry.vertices.length; i++) {
+	// 	linkPointToPoint(sphere.geometry.vertices[i-1], sphere.geometry.vertices[i]);
+	// }
+
 	// DRAW !
 	function render() {
 		renderer.render(scene, camera);
@@ -136,6 +153,47 @@ $(function() {
 		camera.updateProjectionMatrix();
 	});
 
+	function placePoint(position) {
+		var pointGeom = new THREE.SphereGeometry(1, SEGMENTS, RINGS);
+		var pointMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 1, depthWrite: false });
+
+		newPoint = new THREE.Mesh(pointGeom, pointMaterial);
+		newPoint.position.set(position.x, position.y, position.z);
+		sphere.add(newPoint);
+		all_points.push(newPoint);
+	}
+
+	function linkPointToPoint(pos1, pos2) {
+		// var lineMaterial = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+		// var lineGeom = new THREE.Geometry();
+		// lineGeom.vertices.push(pos1);
+		// lineGeom.vertices.push(pos2);
+
+		// newLine = new THREE.Line(lineGeom, lineMaterial);
+		// sphere.add(newLine);
+
+		var all_lines = [];
+		for (var i = 0; i < all_points.length; i++) {
+			var startPoint = all_points[i].position;
+
+			for (var f = 0; f < all_points.length; f++) {
+				var endPoint = all_points[f].position;
+
+				if(startPoint.distanceTo( endPoint ) <= (RADIUS/2) && all_lines[i] != f) {
+					var lineMaterial = new THREE.LineBasicMaterial({color: 0xFFFFFF});
+					var lineGeom = new THREE.Geometry();
+					lineGeom.vertices.push(startPoint);
+					lineGeom.vertices.push(endPoint);
+
+					newLine = new THREE.Line(lineGeom, lineMaterial);
+					sphere.add(newLine);
+					all_lines[i] = f;
+				}
+			}
+		}
+
+	}
+
 	function niceDegree(deg) {
 		if(deg > 360) {
 			deg = deg - (Math.trunc((deg/360)) * 360);
@@ -168,73 +226,73 @@ $(function() {
 		}
 	}
 
-	function placeMarker(obj) {
-		var pinColor = new THREE.Color(obj.color);
+	// function placeMarker(obj) {
+	// 	var pinColor = new THREE.Color(obj.color);
 
-		var markerGeom = new THREE.Geometry();
-		var RandFace = findSphereFaceNumber(obj.type);
+	// 	var markerGeom = new THREE.Geometry();
+	// 	var RandFace = findSphereFaceNumber(obj.type);
 
-		// Add type to this face
-		sphere.geometry.faces[RandFace].type = obj.type;
-		var copiedVertexs = sphere.geometry.faces[RandFace].vertexNormals;
+	// 	// Add type to this face
+	// 	sphere.geometry.faces[RandFace].type = obj.type;
+	// 	var copiedVertexs = sphere.geometry.faces[RandFace].vertexNormals;
 
-		for (var i = 0; i < copiedVertexs.length; i++) {
-			var vertex = copiedVertexs[i].clone();
-			var vector = new THREE.Vector3(vertex.x, vertex.y, vertex.z).multiplyScalar(RADIUS);
-			markerGeom.vertices.push(vector);
-		}
-		markerGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
-		markerGeom.computeFaceNormals();
-		var marker = new THREE.Mesh(
-			markerGeom,
-			new THREE.MeshLambertMaterial({color: pinColor, wireframe: true,transparent: true, opacity: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1})
-		);
-		marker.type = obj.type;
+	// 	for (var i = 0; i < copiedVertexs.length; i++) {
+	// 		var vertex = copiedVertexs[i].clone();
+	// 		var vector = new THREE.Vector3(vertex.x, vertex.y, vertex.z).multiplyScalar(RADIUS);
+	// 		markerGeom.vertices.push(vector);
+	// 	}
+	// 	markerGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+	// 	markerGeom.computeFaceNormals();
+	// 	var marker = new THREE.Mesh(
+	// 		markerGeom,
+	// 		new THREE.MeshLambertMaterial({color: pinColor, wireframe: false,transparent: true, opacity: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1})
+	// 	);
+	// 	marker.type = obj.type;
 
-		// Register good position on sphere
-		var destPos = {};
-		destPos.x = marker.position.x;
-		destPos.y = marker.position.y;
-		destPos.z = marker.position.z;
+	// 	// Register good position on sphere
+	// 	var destPos = {};
+	// 	destPos.x = marker.position.x;
+	// 	destPos.y = marker.position.y;
+	// 	destPos.z = marker.position.z;
 
-		// Change position for random
-		marker.position.x = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
-		marker.position.y = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
-		marker.position.z = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
+	// 	// Change position for random
+	// 	marker.position.x = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
+	// 	marker.position.y = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
+	// 	marker.position.z = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
 
-		marker.baseLoc = {};
-		marker.baseLoc.x = marker.position.x;
-		marker.baseLoc.y = marker.position.y;
-		marker.baseLoc.z = marker.position.z;
+	// 	marker.baseLoc = {};
+	// 	marker.baseLoc.x = marker.position.x;
+	// 	marker.baseLoc.y = marker.position.y;
+	// 	marker.baseLoc.z = marker.position.z;
 
-		marker.sphereLoc = {};
-		marker.sphereLoc.x = destPos.x;
-		marker.sphereLoc.y = destPos.y;
-		marker.sphereLoc.z = destPos.z;
+	// 	marker.sphereLoc = {};
+	// 	marker.sphereLoc.x = destPos.x;
+	// 	marker.sphereLoc.y = destPos.y;
+	// 	marker.sphereLoc.z = destPos.z;
 
-		sphere.add(marker);
-		var speedAnim = Math.random() * 2 + 1;
-		TweenMax.to(marker.position, speedAnim/2, {x: destPos.x, y:destPos.y, z:destPos.z, ease:Quad.easeOut, delay: speedAnim/8});
-		TweenMax.to(marker.material, speedAnim/2, {opacity: 1, ease:Quad.easeOut});
-		clicableObjects.push(marker);
-	}
+	// 	sphere.add(marker);
+	// 	var speedAnim = Math.random() * 2 + 1;
+	// 	TweenMax.to(marker.position, speedAnim/2, {x: destPos.x, y:destPos.y, z:destPos.z, ease:Quad.easeOut, delay: speedAnim/8});
+	// 	TweenMax.to(marker.material, speedAnim/2, {opacity: 1, ease:Quad.easeOut});
+	// 	clicableObjects.push(marker);
+	// }
 
 
-	$.each(datas, function(i) {
-		switch(datas[i].type) {
-			case "actu":
-				datas[i].color = "rgb(255,0,0)";
-				break;
-			case "social":
-				datas[i].color = "rgb(0,255,0)";
-				break;
-			case "ambassadeur":
-				datas[i].color = "rgb(0,0,255)";
-				break;
-		}
+	// $.each(datas, function(i) {
+	// 	switch(datas[i].type) {
+	// 		case "actu":
+	// 			datas[i].color = "rgb(255,0,0)";
+	// 			break;
+	// 		case "social":
+	// 			datas[i].color = "rgb(0,255,0)";
+	// 			break;
+	// 		case "ambassadeur":
+	// 			datas[i].color = "rgb(0,0,255)";
+	// 			break;
+	// 	}
 
-		placeMarker(datas[i]);
-	});
+	// 	placeMarker(datas[i]);
+	// });
 
 	$("nav li").bind("click", function() {
 		var typeToShow = $(this).attr("data-type");
@@ -299,7 +357,7 @@ $(function() {
 
 			// Si clic sur pin -> direction sur la pin
 			var clickedType = intersects[ 0 ].object.type;
-			// filter(clickedType);
+			filter(clickedType);
 
 			// FILL CLICKED OBJECT
 			// if(intersects[ 0 ].object.material.wireframe) {
@@ -309,28 +367,5 @@ $(function() {
 			// }
 		}
 	}
-
-	// document.addEventListener( 'mouseup', onDocumentMouseUp, false );
-	// function onDocumentMouseUp(event) {
-	// 	event.preventDefault();
-	// 	MOUSE_IS_DOWN = false;
-	// }
-
-	// document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-	// function onDocumentMouseMove(event) {
-	// 	if(!MOUSE_IS_DOWN) {
-	// 		return;
-	// 	}
-
-	// 	event.preventDefault();
-	// 	// WAIT_BEFORE_ROTATE = WAIT_BEFORE_ROTATE_TIME;
-	// 	var deltaX = event.clientX - MOUSECLIC_X;
-	// 	var deltaY = event.clientY - MOUSECLIC_Y;
-	// 	MOUSECLIC_X = event.clientX;
-	// 	MOUSECLIC_Y = event.clientY;
-
-	// 	sphere.rotation.y += deltaX * Math.PI / 180;
-	// 	sphere.rotation.x += deltaY * Math.PI / 180;
-	// }
 
 });
