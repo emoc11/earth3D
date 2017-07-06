@@ -27,7 +27,8 @@ $(function() {
 
 	// Create a WebGL renderer, camera
 	// and a scene
-	renderer = new THREE.WebGLRenderer();
+	renderer = new THREE.WebGLRenderer({alpha: true});
+	renderer.setClearColor (0xFFFFFF, 1);
 
 	// Start the renderer.
 	renderer.setSize(WIDTH, HEIGHT);
@@ -39,10 +40,10 @@ $(function() {
 	scene = new THREE.Scene();
 
 	// Set up the sphere vars
-	var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length));
+	// var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length));
 	var RADIUS = 60;
-	var SEGMENTS = faceNumberForDatas;
-	var RINGS = faceNumberForDatas;
+	var SEGMENTS = 32;
+	var RINGS = 32;
 	var DETAILS = 2;
 
 	// Create a new mesh with
@@ -59,8 +60,6 @@ $(function() {
 	sphere.rotation.x = 0;
 	sphere.rotation.y = 0;
 
-	// Mouse orbit control
-
 	// Finally, add the sphere to the scene.
 	scene.add(sphere);
 
@@ -75,49 +74,50 @@ $(function() {
 	// Add the camera to the scene.
 	scene.add(camera);
 
+	// Orbit Controls for camera
 	CONTROLS = new THREE.OrbitControls( camera, renderer.domElement );
 	CONTROLS.target = sphere.position;
 	CONTROLS.autoRotate = true;
 	CONTROLS.autoRotateSpeed = -0.05;
+	CONTROLS.enableDamping = true;
+	CONTROLS.dampingFactor = 0.15;
+	CONTROLS.rotateSpeed = 0.2;
 
 	// Create Night Sky with stars
-	var skyGeo = new THREE.SphereGeometry(300, 60, 60);
-	var skyMat = new THREE.MeshBasicMaterial({
-			map: textureLoader.load('img/skystars.png'),
-			side: THREE.BackSide,
-			opacity: 0.4,
-			transparent: true,
-	});
-	var skyMesh = new THREE.Mesh(skyGeo, skyMat);
+	// var skyGeo = new THREE.SphereGeometry(300, 60, 60);
+	// var skyMat = new THREE.MeshBasicMaterial({
+	// 		// map: textureLoader.load('img/skystars.png'),
+	// 		side: THREE.BackSide,
+	// 		// opacity: 0.4,
+	// 		// transparent: true,
+	// 		color: 0xFFFFFF
+	// });
+	// var skyMesh = new THREE.Mesh(skyGeo, skyMat);
 
-	skyMesh.position.z = -150;
-	// Add clouds to sphere
-	scene.add(skyMesh);
+	// skyMesh.position.z = -150;
+	// // Add clouds to sphere
+	// scene.add(skyMesh);
 
 	// Add Light
-	var light = new THREE.AmbientLight( 0xFFFFFF, .8 );
+	var light = new THREE.AmbientLight( 0xFFFFFF, .6 );
 	scene.add( light );
 
-
-	// var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
-	// scene.add(spotLight);
+	// Spotligh in front of sphere
+	var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
+	scene.add(spotLight);
 
 	// Add Point sphere vertice
 	var all_points = [];
 	for (var i = 0; i < sphere.geometry.vertices.length; i++) {
-		var randPoint = Math.round(Math.random());
-		if( randPoint == 1) {
+		// var randPoint = Math.round(Math.random());
+		// if( randPoint == 1) {
 			placePoint(sphere.geometry.vertices[i]);
-		}
+		// }
 	}
 	// all_points[100].material.color = new THREE.Color(0xFF0000);
-	console.log(all_points);
 
 	// Link each vertice to others
-	linkPointToPoint();
-	// for (var i = 1; i < sphere.geometry.vertices.length; i++) {
-	// 	linkPointToPoint(sphere.geometry.vertices[i-1], sphere.geometry.vertices[i]);
-	// }
+	// linkPointToPoint();
 
 	// DRAW !
 	function render() {
@@ -130,7 +130,7 @@ $(function() {
 		// sphere.rotation.x -= 1/32 * randSpeedRotateY;
 		// sphere.rotation.y -= 1/32 * 0.03;
 		CONTROLS.update();
-		// spotLight.position.copy( camera.getWorldPosition() );
+		spotLight.position.copy( camera.getWorldPosition() );
 
 		// if (WAIT_BEFORE_ROTATE <= 0) {
 		// 	sphere.rotation.z += 1/32 * 0.01;
@@ -154,8 +154,21 @@ $(function() {
 	});
 
 	function placePoint(position) {
-		var pointGeom = new THREE.SphereGeometry(1, SEGMENTS, RINGS);
-		var pointMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 1, depthWrite: false });
+		var randRadius = Math.random() * 0.2 + 0.5;
+		var pointGeom = new THREE.SphereGeometry(randRadius, SEGMENTS, RINGS);
+		var randColor = Math.round(Math.random() * 2+1);
+		switch(randColor) {
+			case 1:
+				randColor = 0xff0000;
+				break;
+			case 2:
+				randColor = 0x00ff00;
+				break;
+			case 3:
+				randColor = 0x0000ff;
+				break;
+		}
+		var pointMaterial = new THREE.MeshPhongMaterial({ color: randColor, depthWrite: true, shininess: 0, transparent: false });
 
 		newPoint = new THREE.Mesh(pointGeom, pointMaterial);
 		newPoint.position.set(position.x, position.y, position.z);
