@@ -41,8 +41,8 @@ $(function() {
 	// Set up the sphere vars
 	var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length));
 	var RADIUS = 60;
-	var SEGMENTS = faceNumberForDatas;
-	var RINGS = faceNumberForDatas;
+	var SEGMENTS = 100;
+	var RINGS = 100;
 	var DETAILS = 2;
 
 	// Create a new mesh with
@@ -83,10 +83,11 @@ $(function() {
 	// Create Night Sky with stars
 	var skyGeo = new THREE.SphereGeometry(300, 60, 60);
 	var skyMat = new THREE.MeshBasicMaterial({
-			map: textureLoader.load('img/skystars.png'),
+			// map: textureLoader.load('img/skystars.png'),
 			side: THREE.BackSide,
-			opacity: 0.4,
-			transparent: true,
+			// opacity: 1,
+			// transparent: true,
+			color: 0xFFFFFF
 	});
 	var skyMesh = new THREE.Mesh(skyGeo, skyMat);
 
@@ -95,12 +96,12 @@ $(function() {
 	scene.add(skyMesh);
 
 	// Add Light
-	var light = new THREE.AmbientLight( 0xFFFFFF, .8 );
+	var light = new THREE.AmbientLight( 0xFFFFFF, .3 );
 	scene.add( light );
 
 
-	// var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
-	// scene.add(spotLight);
+	var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
+	scene.add(spotLight);
 
 	// DRAW !
 	function render() {
@@ -113,7 +114,7 @@ $(function() {
 		// sphere.rotation.x -= 1/32 * randSpeedRotateY;
 		// sphere.rotation.y -= 1/32 * 0.03;
 		CONTROLS.update();
-		// spotLight.position.copy( camera.getWorldPosition() );
+		spotLight.position.copy( camera.getWorldPosition() );
 
 		// if (WAIT_BEFORE_ROTATE <= 0) {
 		// 	sphere.rotation.z += 1/32 * 0.01;
@@ -187,7 +188,7 @@ $(function() {
 		markerGeom.computeFaceNormals();
 		var marker = new THREE.Mesh(
 			markerGeom,
-			new THREE.MeshLambertMaterial({color: pinColor, wireframe: true,transparent: true, opacity: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1})
+			new THREE.MeshLambertMaterial({color: pinColor, wireframe: false,transparent: true, opacity: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1})
 		);
 		marker.type = obj.type;
 
