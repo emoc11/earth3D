@@ -1,12 +1,9 @@
-$(function() {
+var CONTROLS, camera, scene, renderer;
 
-	// ETOILES AUTOUR
-	// FLARE ATOUR DE LA PLANETE
+$(function() {
 
 	// Animation variables
 	var SPHERE_ROTATE = true;
-	// var WAIT_BEFORE_ROTATE = 0;
-	// var WAIT_BEFORE_ROTATE_TIME = 200;
 
 	// Other variables
 	var clicableObjects = [];
@@ -24,27 +21,13 @@ $(function() {
 	var NEAR = 0.1;
 	var FAR = 10000;
 
-	var cameraRotation = 0;
-
 	// Get the DOM element to attach to
 	var container =
 	    document.querySelector('#sphere');
 
 	// Create a WebGL renderer, camera
 	// and a scene
-	var renderer = new THREE.WebGLRenderer();
-	var camera =
-	    new THREE.PerspectiveCamera(
-	        VIEW_ANGLE,
-	        ASPECT,
-	        NEAR,
-	        FAR
-	    );
-
-	var scene = new THREE.Scene();
-
-	// Add the camera to the scene.
-	scene.add(camera);
+	renderer = new THREE.WebGLRenderer();
 
 	// Start the renderer.
 	renderer.setSize(WIDTH, HEIGHT);
@@ -53,9 +36,11 @@ $(function() {
 	// DOM element.
 	container.appendChild(renderer.domElement);
 
+	scene = new THREE.Scene();
+
 	// Set up the sphere vars
-	var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length)) * 3;
-	var RADIUS = 50;
+	var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length));
+	var RADIUS = 60;
 	var SEGMENTS = faceNumberForDatas;
 	var RINGS = faceNumberForDatas;
 	var DETAILS = 2;
@@ -79,6 +64,22 @@ $(function() {
 	// Finally, add the sphere to the scene.
 	scene.add(sphere);
 
+	camera =
+	    new THREE.PerspectiveCamera(
+	        VIEW_ANGLE,
+	        ASPECT,
+	        NEAR,
+	        FAR
+	    );
+
+	// Add the camera to the scene.
+	scene.add(camera);
+
+	CONTROLS = new THREE.OrbitControls( camera, renderer.domElement );
+	CONTROLS.target = sphere.position;
+	CONTROLS.autoRotate = true;
+	CONTROLS.autoRotateSpeed = -0.05;
+
 	// Create Night Sky with stars
 	var skyGeo = new THREE.SphereGeometry(300, 60, 60);
 	var skyMat = new THREE.MeshBasicMaterial({
@@ -89,17 +90,17 @@ $(function() {
 	});
 	var skyMesh = new THREE.Mesh(skyGeo, skyMat);
 
-	skyMesh.position.z = -400;
+	skyMesh.position.z = -150;
 	// Add clouds to sphere
 	scene.add(skyMesh);
 
 	// Add Light
-	var light = new THREE.AmbientLight( 0xFFFFFF, .3 );
+	var light = new THREE.AmbientLight( 0xFFFFFF, .8 );
 	scene.add( light );
 
 
-	var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
-	scene.add(spotLight);
+	// var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
+	// scene.add(spotLight);
 
 	// DRAW !
 	function render() {
@@ -109,7 +110,10 @@ $(function() {
 	function update () {
 		requestAnimationFrame(update);
 
-		sphere.rotation.y -= 1/32 * 0.01;
+		// sphere.rotation.x -= 1/32 * randSpeedRotateY;
+		// sphere.rotation.y -= 1/32 * 0.03;
+		CONTROLS.update();
+		// spotLight.position.copy( camera.getWorldPosition() );
 
 		// if (WAIT_BEFORE_ROTATE <= 0) {
 		// 	sphere.rotation.z += 1/32 * 0.01;
@@ -132,45 +136,6 @@ $(function() {
 		camera.updateProjectionMatrix();
 	});
 
-	function getPosition() {
-		// Random latitude from -90° to 90°
-		var lat = Math.round(Math.random() * 180 - 90);
-		// Random longitude from -180° to 180°
-		var long = Math.round(Math.random() * 360 - 180);
-		//return both values
-		return lat+","+long;
-	}
-
-	function changeLocalisation(localisation) {
-		var latLon = localisation.split(",");
-		var lat = latLon[0];
-		var lon = latLon[1];
-
-		var verticalOffset = 0.1;
-
-		var longToDest = 270 - lon;
-		rotateOnGoodSide(longToDest);
-		// WAIT_BEFORE_ROTATE = WAIT_BEFORE_ROTATE_TIME;
-	}
-
-	function rotateOnGoodSide( targetDegree ){
-		var currentYRotation = sphere.rotation.y * 180 / Math.PI;
-
-		// Nicely refacto degree to min 0° and max 360°
-		currentYRotation = niceDegree(currentYRotation);
-		targetDegree = niceDegree(targetDegree);
-
-		var angleToGo = 0;
-
-		if((targetDegree-currentYRotation) > 180) {
-			angleToGo = (360 - (targetDegree-currentYRotation)) * (Math.PI / 180);
-			TweenMax.to(sphere.rotation, .3, {y: "-="+angleToGo, ease: Quad.easeOut});
-		} else {
-			angleToGo = ((targetDegree-currentYRotation)) * (Math.PI / 180);
-			TweenMax.to(sphere.rotation, .3, {y: "+="+angleToGo, ease: Quad.easeOut});
-		}
-	}
-
 	function niceDegree(deg) {
 		if(deg > 360) {
 			deg = deg - (Math.trunc((deg/360)) * 360);
@@ -180,67 +145,9 @@ $(function() {
 		return deg;
 	}
 
-	function niceLatitude(lat) {
-		if(lat > 90) {
-			lat = Math.trunc((-(Math.trunc((lat/90)) * 90 + 90) + Math.abs(90 - lat))/90) * 90;
-		} else if(lat < -90) {
-			lat = (Math.trunc((lat/90)) * 90 + 90) - Math.abs(lat + 90);
-		}
-		return lat;
-	}
-
-	function niceLongitude(lon) {
-		if(lon > 180) {
-			lon = -(Math.trunc((lon/180)) * 180 + 180) + Math.abs(180 - lon);
-		} else if(lon < -180) {
-			lon = (Math.trunc((lon/180)) * 180 + 180) - Math.abs(lon + 180);
-		}
-		return lon;
-	}
-
 	function latLongToVec3 ( lat, lon ) {
 		lat =  lat * Math.PI / 180.0;
 		lon = -lon * Math.PI / 180.0;
-
-		// RANDOM ON CIRCLE AND SOME OUTSIDE
-		// var rd = Math.round(Math.random() * 15 - 5);
-		// var displacement = - Math.random();
-		// if(rd == -5) {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat) * Math.cos(lon),
-		// 		Math.sin(lat),
-		// 		Math.cos(lat + displacement) * Math.sin(lon));
-		// } else if(rd == -4) {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat) * Math.cos(lon),
-		// 		Math.sin(lat),
-		// 		Math.cos(lat) * Math.sin(lon + displacement));
-		// } else if(rd == -3) {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat) * Math.cos(lon),
-		// 		Math.sin(lat + displacement),
-		// 		Math.cos(lat) * Math.sin(lon));
-		// } else if(rd == -2) {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat) * Math.cos(lon),
-		// 		Math.sin(lat + displacement),
-		// 		Math.cos(lat) * Math.sin(lon));
-		// } else if(rd == -1) {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat + displacement) * Math.cos(lon),
-		// 		Math.sin(lat),
-		// 		Math.cos(lat) * Math.sin(lon));
-		// } else if(rd == 0) {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat) * Math.cos(lon + displacement),
-		// 		Math.sin(lat),
-		// 		Math.cos(lat) * Math.sin(lon));
-		// } else {
-		// 	return new THREE.Vector3(
-		// 		Math.cos(lat) * Math.cos(lon),
-		// 		Math.sin(lat),
-		// 		Math.cos(lat) * Math.sin(lon));
-		// }
 
 		return new THREE.Vector3(
 			Math.cos(lat) * Math.cos(lon),
@@ -252,16 +159,7 @@ $(function() {
 
 	function findSphereFaceNumber(objType) {
 		var rand = Math.trunc(Math.random() * sphere.geometry.faces.length);
-		var randLess = rand - 5;
-		var randMore = rand + 5;
-		if(randLess < 0) randLess = 0;
-		if(randMore > sphere.geometry.faces.length) randMore = sphere.geometry.faces.length-1;
 
-		for (var i = randLess; i < randMore; i++) {
-			if (objType == sphere.geometry.faces[i].type) {
-				return findSphereFaceNumber(objType);
-			}
-		}
 		if(!sphereFaceUsed.includes(rand)) {
 			sphereFaceUsed.push(rand);
 			return rand;
@@ -323,7 +221,6 @@ $(function() {
 
 
 	$.each(datas, function(i) {
-		var latlong = getPosition();
 		switch(datas[i].type) {
 			case "actu":
 				datas[i].color = "rgb(255,0,0)";
@@ -345,30 +242,21 @@ $(function() {
 		filterMarker(typeToShow);
 	});
 
-	function doOutAnim() {
+	function filter(clickedType) {
 		// EXPLOSION ANIM, comme pour apparaitre en sens inverse
 		$.each(sphere.children, function() {
-			var speedAnim = Math.random() * 2 + 1;
-			TweenMax.to(this.position, speedAnim, {x: this.baseLoc.x, y: this.baseLoc.y, z: this.baseLoc.z, ease:Quad.easeOut});
-			TweenMax.to(this.material, speedAnim/2, {opacity: 0, ease:Quad.easeOut, delay: speedAnim/4});
+			if(clickedType != this.type) {
+				if(this.material.opacity == 1) {
+					var item = this;
+					TweenMax.to(this.position, 1, {x:item.baseLoc.x, y:item.baseLoc.y, z:item.baseLoc.z, ease:Quad.easeOut});
+					TweenMax.to(this.material, 1, {opacity:0, ease:Quad.easeOut});
+				} else {
+					var item = this;
+					TweenMax.to(this.position, 1, {x:item.sphereLoc.x, y:item.sphereLoc.y, z:item.sphereLoc.z, ease:Quad.easeOut});
+					TweenMax.to(this.material, 1, {opacity:1, ease:Quad.easeOut});
+				}
+			}
 		});
-
-		// SPHERE SCALE + ROTATION -> transition
-		// var newScale = 2.8;
-		// if(sphere.rotation.x == 90 * Math.PI / 180 && sphere.rotation.y == 0) {
-		// 	TweenMax.to(sphere.scale, .8, {x: newScale, y: newScale, z: newScale, ease:Quad.easeInOut});
-		// 	TweenMax.to(sphere.rotation, .8, {z: "+=2", ease:Quad.easeInOut});
-		// 	$.each(sphere.children, function() {
-		// 		TweenMax.to(this.material, .8/2, {opacity: 0, ease:Quad.easeOut, delay: .8/4});
-		// 	});
-		// } else {
-		// 	TweenMax.to(sphere.rotation, .6, {x: 90 * Math.PI / 180, y: 0, ease:Quad.easeInOut});
-		// 	TweenMax.to(sphere.scale, .8, {x: newScale, y: newScale, z: newScale, ease:Quad.easeInOut, delay: .5});
-		// 	TweenMax.to(sphere.rotation, .8, {z: "+=2", ease:Quad.easeInOut, delay: .5});
-		// 	$.each(sphere.children, function() {
-		// 		TweenMax.to(this.material, .8/2, {opacity: 0, ease:Quad.easeOut, delay: .8/4+.5});
-		// 	});
-		// }
 
 	}
 
@@ -382,11 +270,9 @@ $(function() {
 				}
 			});
 		} else if (typeToShow == "outAnim") {
-			doOutAnim();
+			filter("noone");
 		} else if (typeToShow == "all") {
-			$.each(sphere.children, function() {
-				TweenMax.to(this.material, .2, {opacity: 1, ease:Quad.easeOut});
-			});
+			filter("all");
 		}
 	}
 
@@ -406,49 +292,45 @@ $(function() {
 		mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
 		mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
 
-		// DETECT CLIC ON MAPS's PINS
+		// DETECT CLIC ON OBJECT
 		raycaster.setFromCamera( mouse, camera );
 		var intersects = raycaster.intersectObjects( clicableObjects );
 		if ( intersects.length > 0 ) {
 
 			// Si clic sur pin -> direction sur la pin
-			if(intersects[ 0 ].object.material.wireframe) {
-				intersects[ 0 ].object.material.wireframe = false;
-			} else {
-				intersects[ 0 ].object.material.wireframe = true;
-			}
-
 			var clickedType = intersects[ 0 ].object.type;
-			var hidedItem = [];
-			$.each(sphere.children, function() {
-				if(clickedType != this.type) {
-					TweenMax.to(this.position, 1, {ease:Quad.easeOut})
-				}
-			});
+			// filter(clickedType);
+
+			// FILL CLICKED OBJECT
+			// if(intersects[ 0 ].object.material.wireframe) {
+			// 	intersects[ 0 ].object.material.wireframe = false;
+			// } else {
+			// 	intersects[ 0 ].object.material.wireframe = true;
+			// }
 		}
 	}
 
-	document.addEventListener( 'mouseup', onDocumentMouseUp, false );
-	function onDocumentMouseUp(event) {
-		event.preventDefault();
-		MOUSE_IS_DOWN = false;
-	}
+	// document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+	// function onDocumentMouseUp(event) {
+	// 	event.preventDefault();
+	// 	MOUSE_IS_DOWN = false;
+	// }
 
-	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
-	function onDocumentMouseMove(event) {
-		if(!MOUSE_IS_DOWN) {
-			return;
-		}
+	// document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	// function onDocumentMouseMove(event) {
+	// 	if(!MOUSE_IS_DOWN) {
+	// 		return;
+	// 	}
 
-		event.preventDefault();
-		// WAIT_BEFORE_ROTATE = WAIT_BEFORE_ROTATE_TIME;
-		var deltaX = event.clientX - MOUSECLIC_X;
-		var deltaY = event.clientY - MOUSECLIC_Y;
-		MOUSECLIC_X = event.clientX;
-		MOUSECLIC_Y = event.clientY;
+	// 	event.preventDefault();
+	// 	// WAIT_BEFORE_ROTATE = WAIT_BEFORE_ROTATE_TIME;
+	// 	var deltaX = event.clientX - MOUSECLIC_X;
+	// 	var deltaY = event.clientY - MOUSECLIC_Y;
+	// 	MOUSECLIC_X = event.clientX;
+	// 	MOUSECLIC_Y = event.clientY;
 
-		sphere.rotation.y += deltaX * Math.PI / 180;
-		sphere.rotation.x += deltaY * Math.PI / 180;
-	}
+	// 	sphere.rotation.y += deltaX * Math.PI / 180;
+	// 	sphere.rotation.x += deltaY * Math.PI / 180;
+	// }
 
 });
