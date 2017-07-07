@@ -11,26 +11,97 @@
 			padding: 0;
 			margin: 0;
 			overflow: hidden;
+			width: 100vw;
+			height: 100vh;
+			position: relative;
 		}
 
 		#earth {
 			width: 100vw;
 			height: 100vh;
-			background: white;
+			position: absolute;
+			top: 0;
+			left: 0;
+		}
+
+		a {
+			color: inherit;
+			text-decoration: none;
+		}
+
+		nav {
+			position: absolute;
+			top: 50%;
+			right: 50px;
+			transform: translateY(-50%);
+			text-align: right;
+		}
+
+		nav ul {
+			list-style-type: none;
+			padding-right: 10px;
+			border-right: 1px solid black;
+		}
+
+		nav li {
+			position: relative;
+			margin-right: -15px;
+			transform-origin: right top;
+			font-size: 20px;
+		}
+
+		nav li.actif {
+			color: #0000FF;
+		}
+
+		nav li:first-child a{
+			margin-top: -25px;
+		}
+
+		nav li:first-child + li {
+			margin-top: -25px;
+		}
+
+		nav li:last-child a{
+			margin-bottom: -15px;
+		}
+
+		nav li + li {
+			padding-top: 60px;
+		}
+
+		nav li a {
+			display: inline-block;
+			vertical-align: middle;
+			margin-right: 15px;
+		}
+
+		nav li a:after {
+			content: "";
+			width: 10px;
+			height: 10px;
+			background: #0000FF;
+			border-radius: 5px;
+			display: inline-block;
+			vertical-align: middle;
+			position: relative;
+			right: -15px;
 		}
 	</style>
 
 	<div id="sphere"></div>
 
-	<!-- <nav>
+	<canvas id="circle" width="578" height="200"></canvas>
+
+	<nav>
 		<ul>
-			<li data-type="all">Tous</li>
-			<li data-type="actu">Actu</li>
-			<li data-type="social">Social</li>
-			<li data-type="ambassadeur">Ambassadeur</li>
-			<li data-type="outAnim">Out Anim</li>
+			<li data-type="all" class="actif"><a href="#">Tous</a</li>
+			<li data-type="actu"><a href="#">Actu</a></li>
+			<li data-type="social"><a href="#">Social</a></li>
+			<li data-type="ambassadeur"><a href="#">Ambassadeur</a></li>
+			<li data-type="outAnim"><a href="#">Out Anim</a></li>
 		</ul>
-	</nav> -->
+	</nav>
 
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
 	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/86/three.min.js"></script>
@@ -39,5 +110,6 @@
 	<script type="text/javascript" src="js/orbitControls.js"></script>
 	<script src="js/datas.js"></script>
 	<script type="text/javascript" src="js/main.js"></script>
+	<!-- <script type="text/javascript" src="js/2dcanvas.js"></script> -->
 </body>
 </html>

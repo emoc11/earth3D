@@ -1,3 +1,7 @@
+/*
+ * Gestion du CANVAS 3D pour la sphere
+*/
+
 var CONTROLS, camera, scene, renderer;
 
 $(function() {
@@ -50,7 +54,7 @@ $(function() {
 	// sphere geometry
 	var textureLoader = new THREE.TextureLoader();
 	var mainGeom = new THREE.SphereGeometry(RADIUS, SEGMENTS, RINGS);
-	var mainMaterial = new THREE.MeshBasicMaterial({ color: 0x0000FF, transparent: true, opacity: 0.0, depthWrite: false, wireframe:false });
+	var mainMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, wireframe:false });
 
 	sphere = new THREE.Mesh(mainGeom, mainMaterial);
 
