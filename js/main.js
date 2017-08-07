@@ -7,13 +7,26 @@ var CONTROLS, camera, scene, renderer;
 $(function() {
 
 	// Animation variables
-	var SPHERE_ROTATE = true;
+	var interactivObjects = [];
+	var littlePointMoving = [];
+	var pointNeedToMove = [];
+	var circlOnPoint = [];
+	var distCircPoints = [];
+	var lastPointHover;
+	var maxDistanceMove = 10;
+	var hoverCirc;
+	var wasNotOnHoverState = true;
+
+	var maxScaleSphere = 1.03;
+	var minScaleSphere = 1;
+	var sphereNeedToBeLittle = false;
+	var sphereScaleChanging = .0001;
+	var SPHERE_SCALE_CHANGE = false;
+	var SPHERE_SCALE = 1;
+	var SPHERE_AUTO_ROTATE = true;
 
 	// Other variables
-	var clicableObjects = [];
 	var MOUSE_IS_DOWN = false;
-	var MOUSECLIC_X;
-	var MOUSECLIC_Y;
 
 	// Set the scene size.
 	var WIDTH = $(window).innerWidth();
@@ -26,41 +39,37 @@ $(function() {
 	var FAR = 10000;
 
 	// Get the DOM element to attach to
-	var container =
-	    document.querySelector('#sphere');
+	var container = $('#sphere');
 
 	// Create a WebGL renderer, camera
 	// and a scene
-	renderer = new THREE.WebGLRenderer({alpha: true});
-	renderer.setClearColor (0xFFFFFF, 1);
+	renderer = new THREE.WebGLRenderer({alpha: true, antialiasing: true});
+	renderer.setClearColor (0xFFFFFF, 0);
 
 	// Start the renderer.
 	renderer.setSize(WIDTH, HEIGHT);
 
 	// Attach the renderer-supplied
 	// DOM element.
-	container.appendChild(renderer.domElement);
+	container.append(renderer.domElement);
 
 	scene = new THREE.Scene();
 
 	// Set up the sphere vars
-	// var faceNumberForDatas = Math.ceil(Math.sqrt(datas.length));
-	var RADIUS = 60;
-	var SEGMENTS = 32;
-	var RINGS = 32;
-	var DETAILS = 2;
+	var RADIUS = 40;
+	var SEGMENTS = 50;
+	var RINGS = 50;
 
 	// Create a new mesh with
 	// sphere geometry
 	var textureLoader = new THREE.TextureLoader();
 	var mainGeom = new THREE.SphereGeometry(RADIUS, SEGMENTS, RINGS);
-	var mainMaterial = new THREE.MeshBasicMaterial({ color: 0xFFFFFF, wireframe:false });
+	var mainMaterial = new THREE.MeshPhongMaterial({ color: 0x1a15cb, wireframe:false, transparent: false, opacity:0.0, shininess:0 });
 
 	sphere = new THREE.Mesh(mainGeom, mainMaterial);
 
-	// Move the Sphere back in Z so we
-	// can see it.
-	sphere.position.z = -190;
+	// Sphere position
+	sphere.position.z = -170;
 	sphere.rotation.x = 0;
 	sphere.rotation.y = 0;
 
@@ -81,47 +90,56 @@ $(function() {
 	// Orbit Controls for camera
 	CONTROLS = new THREE.OrbitControls( camera, renderer.domElement );
 	CONTROLS.target = sphere.position;
-	CONTROLS.autoRotate = true;
+	CONTROLS.autoRotate = SPHERE_AUTO_ROTATE;
 	CONTROLS.autoRotateSpeed = -0.05;
 	CONTROLS.enableDamping = true;
 	CONTROLS.dampingFactor = 0.15;
 	CONTROLS.rotateSpeed = 0.2;
-
-	// Create Night Sky with stars
-	// var skyGeo = new THREE.SphereGeometry(300, 60, 60);
-	// var skyMat = new THREE.MeshBasicMaterial({
-	// 		// map: textureLoader.load('img/skystars.png'),
-	// 		side: THREE.BackSide,
-	// 		// opacity: 0.4,
-	// 		// transparent: true,
-	// 		color: 0xFFFFFF
-	// });
-	// var skyMesh = new THREE.Mesh(skyGeo, skyMat);
-
-	// skyMesh.position.z = -150;
-	// // Add clouds to sphere
-	// scene.add(skyMesh);
-
-	// Add Light
-	var light = new THREE.AmbientLight( 0xFFFFFF, .6 );
-	scene.add( light );
-
-	// Spotligh in front of sphere
-	var spotLight = new THREE.SpotLight(0xffffff, 5, 185, 10, 4);
-	scene.add(spotLight);
+	CONTROLS.enableZoom = false;
+	CONTROLS.enablePan = false;
+	CONTROLS.enableKeys = false;
+	CONTROLS.minPolarAngle = 70 * Math.PI / 180;
+	CONTROLS.maxPolarAngle = Math.PI - (70 * Math.PI / 180);
 
 	// Add Point sphere vertice
-	var all_points = [];
-	for (var i = 0; i < sphere.geometry.vertices.length; i++) {
-		// var randPoint = Math.round(Math.random());
-		// if( randPoint == 1) {
-			placePoint(sphere.geometry.vertices[i]);
-		// }
-	}
-	// all_points[100].material.color = new THREE.Color(0xFF0000);
+	// var all_points = [];
+	var depl = {};
+	var deplPoint = false;
+	var wasOnFirst = true;
+	var ringsCount = 0;
 
-	// Link each vertice to others
-	// linkPointToPoint();
+	for (var i = 0; i < sphere.geometry.vertices.length; i++) {
+		if(i%RINGS == 0) {
+			deplPoint = !deplPoint;
+
+			if(!deplPoint && i>=1) {
+				depl.x = sphere.geometry.vertices[i].x + ((sphere.geometry.vertices[i-1].x - sphere.geometry.vertices[i].x)/2);
+				depl.y = sphere.geometry.vertices[i].y + ((sphere.geometry.vertices[i-1].y - sphere.geometry.vertices[i].y)/2);
+				depl.z = sphere.geometry.vertices[i].z + ((sphere.geometry.vertices[i-1].z - sphere.geometry.vertices[i].z)/2);
+				placePoint(depl);
+			} else {
+				placePoint(sphere.geometry.vertices[i]);
+			}
+			wasOnFirst = true;
+			ringsCount++;
+		} else {
+			if(wasOnFirst && !deplPoint && ringsCount >= 6 && ringsCount <= RINGS-6) {
+				depl.x = sphere.geometry.vertices[i].x;
+				depl.y = sphere.geometry.vertices[i].y;
+				depl.z = sphere.geometry.vertices[i].z;
+				placePoint(depl);
+			} else if (i >= 1 && deplPoint) {
+				depl.x = sphere.geometry.vertices[i].x + ((sphere.geometry.vertices[i-1].x - sphere.geometry.vertices[i].x)/2);
+				depl.y = sphere.geometry.vertices[i].y + ((sphere.geometry.vertices[i-1].y - sphere.geometry.vertices[i].y)/2);
+				depl.z = sphere.geometry.vertices[i].z + ((sphere.geometry.vertices[i-1].z - sphere.geometry.vertices[i].z)/2);
+				placePoint(depl);
+			} else {
+				placePoint(sphere.geometry.vertices[i]);
+			}
+
+			wasOnFirst = false;
+		}
+	}
 
 	// DRAW !
 	function render() {
@@ -131,17 +149,25 @@ $(function() {
 	function update () {
 		requestAnimationFrame(update);
 
-		// sphere.rotation.x -= 1/32 * randSpeedRotateY;
-		// sphere.rotation.y -= 1/32 * 0.03;
 		CONTROLS.update();
-		spotLight.position.copy( camera.getWorldPosition() );
+		// spotLight.position.copy( camera.getWorldPosition() );
 
-		// if (WAIT_BEFORE_ROTATE <= 0) {
-		// 	sphere.rotation.z += 1/32 * 0.01;
-		// 	WAIT_BEFORE_ROTATE = 0;
-		// } else if(WAIT_BEFORE_ROTATE > 0) {
-		// 	WAIT_BEFORE_ROTATE -= 1;
-		// }
+		if(SPHERE_SCALE_CHANGE) {
+			if(sphereNeedToBeLittle) {
+				SPHERE_SCALE -= sphereScaleChanging;
+				if(SPHERE_SCALE <= minScaleSphere) {
+					SPHERE_SCALE = minScaleSphere;
+					sphereNeedToBeLittle = false;
+				}
+			} else {
+				SPHERE_SCALE += sphereScaleChanging;
+				if(SPHERE_SCALE >= maxScaleSphere) {
+					SPHERE_SCALE = maxScaleSphere;
+					sphereNeedToBeLittle = true;
+				}
+			}
+			sphere.scale.set(SPHERE_SCALE, SPHERE_SCALE, SPHERE_SCALE);
+		}
 
 		render();
 	}
@@ -157,62 +183,68 @@ $(function() {
 		camera.updateProjectionMatrix();
 	});
 
-	function placePoint(position) {
-		var randRadius = Math.random() * 0.2 + 0.5;
-		var pointGeom = new THREE.SphereGeometry(randRadius, SEGMENTS, RINGS);
-		// var randColor = Math.round(Math.random() * 2+1);
-		// switch(randColor) {
-		// 	case 1:
-		// 		randColor = 0xff0000;
-		// 		break;
-		// 	case 2:
-		// 		randColor = 0x00ff00;
-		// 		break;
-		// 	case 3:
-		// 		randColor = 0x0000ff;
-		// 		break;
-		// }
-		randColor = 0x0000FF;
-		var pointMaterial = new THREE.MeshPhongMaterial({ color: randColor, depthWrite: true, shininess: 0, transparent: false });
+	function placePoint(position, otherColor) {
+		// var randRadius = Math.random() * 0.2 + 0.5;
+		var pointGeom = new THREE.SphereGeometry(0.2, 8, 8);
+		var color = 0xFFFFFF;
+		if(otherColor) color = 0xFF0000;
+		var pointMaterial = new THREE.MeshBasicMaterial({ color: color, transparent: false });
 
 		newPoint = new THREE.Mesh(pointGeom, pointMaterial);
-		newPoint.position.set(position.x, position.y, position.z);
+		var newVec = new THREE.Vector3(position.x, position.y, position.z);
+		newVec.multiplyScalar(1.02);
+		newPoint.position.copy(newVec);
+		newPoint.categ = "";
+		newPoint.defaultPos = new THREE.Vector3(newVec.x, newVec.y, newVec.z);
 		sphere.add(newPoint);
-		all_points.push(newPoint);
+
+		// all_points.push(newPoint);
+		littlePointMoving.push(newPoint);
 	}
 
-	function linkPointToPoint(pos1, pos2) {
-		var lineCounter = 1;
-		var lineDistanceMax = 0;
-		for (var i = 0; i < all_points.length; i++) {
-			var startPoint = all_points[i].position;
+	sphereChildrenUsed = [];
+	function findSphereChildrenNumber() {
+		var ringToIgnore = Math.round(RINGS/8);
+		var rand = Math.trunc(Math.random() * (sphere.children.length - (SEGMENTS*ringToIgnore*2)) + SEGMENTS*ringToIgnore);
 
-			if(i%32 == 0 && i <= all_points.length) {
-				if(lineCounter <= 16) {
-					lineDistanceMax = (RADIUS/4) - ((16-lineCounter)*0.62);
-				} else if (lineCounter > 16) {
-					lineDistanceMax = (RADIUS/4) + ((16-lineCounter)*0.62);
-				}
-				console.log(lineDistanceMax);
-				// lineDistanceMax = 5 - (16-lineCounter);
-				lineCounter += 1;
-			}
+		if(!sphereChildrenUsed.includes(rand)) {
+			sphereChildrenUsed.push(rand);
+			return rand;
+		} else {
+			return findSphereChildrenNumber();
+		}
+	}
 
-			for (var f = 0; f < all_points.length; f++) {
-				var endPoint = all_points[f].position;
 
-				if(startPoint.distanceTo( endPoint ) <= lineDistanceMax) {
-					var lineMaterial = new THREE.LineBasicMaterial({color: 0x000000});
-					var lineGeom = new THREE.Geometry();
-					lineGeom.vertices.push(startPoint);
-					lineGeom.vertices.push(endPoint);
-
-					newLine = new THREE.Line(lineGeom, lineMaterial);
-					sphere.add(newLine);
-				}
-			}
+	$.each(datas, function(i) {
+		switch(datas[i].type) {
+			case "actu":
+				datas[i].color = new THREE.Color(0xf25656);
+				break;
+			case "social":
+				datas[i].color = new THREE.Color(0x00f6ff);
+				break;
+			case "ambassadeur":
+				datas[i].color = new THREE.Color(0xffe400);
+				break;
 		}
 
+		placeDataPoint(datas[i]);
+	});
+
+	function placeDataPoint(obj) {
+		var pinColor = new THREE.Color(obj.color);
+		var RandChildNumber = findSphereChildrenNumber();
+
+		// Change this children : bigger + new color
+		var newScale = 3;
+		TweenMax.to(sphere.children[RandChildNumber].scale, .6, {x:newScale, y:newScale, z:newScale, ease: Back.easeOut, delay:Math.random() * 0.5});
+		sphere.children[RandChildNumber].material.color = pinColor;
+		sphere.children[RandChildNumber].categ = obj.type;
+
+		// add this one to interactive and delete it from littlePointMoving
+		interactivObjects.push(sphere.children[RandChildNumber]);
+		littlePointMoving.splice(littlePointMoving.indexOf(sphere.children[RandChildNumber]), 1);
 	}
 
 	function niceDegree(deg) {
@@ -234,107 +266,142 @@ $(function() {
 			Math.cos(lat) * Math.sin(lon));
 	}
 
-	sphereFaceUsed = [];
-
-	function findSphereFaceNumber(objType) {
-		var rand = Math.trunc(Math.random() * sphere.geometry.faces.length);
-
-		if(!sphereFaceUsed.includes(rand)) {
-			sphereFaceUsed.push(rand);
-			return rand;
-		} else {
-			return findSphereFaceNumber(objType);
-		}
-	}
-
-	// function placeMarker(obj) {
-	// 	var pinColor = new THREE.Color(obj.color);
-
-	// 	var markerGeom = new THREE.Geometry();
-	// 	var RandFace = findSphereFaceNumber(obj.type);
-
-	// 	// Add type to this face
-	// 	sphere.geometry.faces[RandFace].type = obj.type;
-	// 	var copiedVertexs = sphere.geometry.faces[RandFace].vertexNormals;
-
-	// 	for (var i = 0; i < copiedVertexs.length; i++) {
-	// 		var vertex = copiedVertexs[i].clone();
-	// 		var vector = new THREE.Vector3(vertex.x, vertex.y, vertex.z).multiplyScalar(RADIUS);
-	// 		markerGeom.vertices.push(vector);
-	// 	}
-	// 	markerGeom.faces.push( new THREE.Face3( 0, 1, 2 ) );
-	// 	markerGeom.computeFaceNormals();
-	// 	var marker = new THREE.Mesh(
-	// 		markerGeom,
-	// 		new THREE.MeshLambertMaterial({color: pinColor, wireframe: false,transparent: true, opacity: 0, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1})
-	// 	);
-	// 	marker.type = obj.type;
-
-	// 	// Register good position on sphere
-	// 	var destPos = {};
-	// 	destPos.x = marker.position.x;
-	// 	destPos.y = marker.position.y;
-	// 	destPos.z = marker.position.z;
-
-	// 	// Change position for random
-	// 	marker.position.x = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
-	// 	marker.position.y = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
-	// 	marker.position.z = Math.random() * $(window).innerHeight()/4 - $(window).innerHeight()/8;
-
-	// 	marker.baseLoc = {};
-	// 	marker.baseLoc.x = marker.position.x;
-	// 	marker.baseLoc.y = marker.position.y;
-	// 	marker.baseLoc.z = marker.position.z;
-
-	// 	marker.sphereLoc = {};
-	// 	marker.sphereLoc.x = destPos.x;
-	// 	marker.sphereLoc.y = destPos.y;
-	// 	marker.sphereLoc.z = destPos.z;
-
-	// 	sphere.add(marker);
-	// 	var speedAnim = Math.random() * 2 + 1;
-	// 	TweenMax.to(marker.position, speedAnim/2, {x: destPos.x, y:destPos.y, z:destPos.z, ease:Quad.easeOut, delay: speedAnim/8});
-	// 	TweenMax.to(marker.material, speedAnim/2, {opacity: 1, ease:Quad.easeOut});
-	// 	clicableObjects.push(marker);
-	// }
-
-
-	// $.each(datas, function(i) {
-	// 	switch(datas[i].type) {
-	// 		case "actu":
-	// 			datas[i].color = "rgb(255,0,0)";
-	// 			break;
-	// 		case "social":
-	// 			datas[i].color = "rgb(0,255,0)";
-	// 			break;
-	// 		case "ambassadeur":
-	// 			datas[i].color = "rgb(0,0,255)";
-	// 			break;
-	// 	}
-
-	// 	placeMarker(datas[i]);
-	// });
-
 	var raycaster,mouse;
 	raycaster = new THREE.Raycaster();
 	mouse = new THREE.Vector2();
 
-	document.addEventListener( 'mouseup', onDocumentMouseDown, false );
+	document.addEventListener( 'mousedown', onDocumentMouseDown, false );
 	function onDocumentMouseDown(event) {
+		MOUSE_IS_DOWN = true;
+	}
+
+	document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+	function onDocumentMouseUp(event) {
+		MOUSE_IS_DOWN = false;
+	}
+
+	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	function onDocumentMouseMove(event) {
 		event.preventDefault();
 
-		mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
-		mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
+		if(!MOUSE_IS_DOWN) {
+			mouse.x = ( event.clientX / renderer.domElement.clientWidth ) * 2 - 1;
+			mouse.y = - ( event.clientY / renderer.domElement.clientHeight ) * 2 + 1;
 
-		// DETECT CLIC ON OBJECT
-		raycaster.setFromCamera( mouse, camera );
-		var intersects = raycaster.intersectObjects( clicableObjects );
-		if ( intersects.length > 0 ) {
+			// DETECT CLIC ON OBJECT
+			raycaster.setFromCamera( mouse, camera );
+			var intersects = raycaster.intersectObjects( interactivObjects );
+			if ( intersects.length > 0 ) {
 
-			// Si clic sur pin -> direction sur la pin
-			var obj = intersects[ 0 ];
-			console.log(obj);
+				// Movement des points autour du point d'intérêt
+				var obj = intersects[0];
+				CONTROLS.autoRotate = false;
+				if(wasNotOnHoverState) {
+					pointNeedToMove = [];
+				}
+				wasNotOnHoverState = false;
+				movePointsAround(intersects[0].object);
+			} else {
+				resetPointsPos();
+				wasNotOnHoverState = true;
+			}
 		}
+	}
+
+
+	circlHoverPointUsed = [];
+	function findCircPoint(activeCirc) {
+		var rand = Math.trunc(Math.random() * activeCirc.geometry.vertices.length);
+
+		if(!circlHoverPointUsed.includes(rand)) {
+			circlHoverPointUsed.push(rand);
+			return rand;
+		} else {
+			return findCircPoint();
+		}
+	}
+
+	function movePointsAround(obj) {
+
+		if(lastPointHover != obj.position) {
+			resetPointsPos();
+
+			for (var i = 0; i < littlePointMoving.length; i++) {
+				var el = littlePointMoving[i];
+				// var comparPos = new THREE.Vector3(elPos.x, elPos.y, elPos.z);
+				var distance = obj.position.distanceTo(el.position);
+				if(distance <= maxDistanceMove && distance > 0) {
+					pointNeedToMove.push(el);
+				}
+			}
+
+			var circGeom = new THREE.CircleGeometry( maxDistanceMove, 32 );
+			var circMat = new THREE.MeshBasicMaterial( { color: 0x000000, transparent:true, opacity:0, wireframe: true } );
+			hoverCirc = new THREE.Mesh( circGeom, circMat );
+			scene.add(hoverCirc);
+
+			obj.updateMatrixWorld();
+			var vec = new THREE.Vector3();
+			vec.setFromMatrixPosition(obj.matrixWorld);
+			hoverCirc.position.set(vec.x, vec.y, vec.z);
+			hoverCirc.lookAt(sphere.position);
+
+			circlOnPoint.push(hoverCirc);
+
+			for (var i = 0; i < pointNeedToMove.length; i++) {
+				var tempDist = [];
+				var destPos = {};
+				var smallDist = 999999;
+
+				hoverCirc.updateMatrixWorld();
+				pointNeedToMove[i].updateMatrixWorld();
+
+				for (var j = 1; j < hoverCirc.geometry.vertices.length-1; j++) {
+					var testVecPoint = new THREE.Vector3();
+					testVecPoint.setFromMatrixPosition(pointNeedToMove[i].matrixWorld);
+
+					var testworldVecCirc = hoverCirc.geometry.vertices[j].clone();
+					testworldVecCirc.applyMatrix4( hoverCirc.matrixWorld );
+
+					var difDist = testVecPoint.distanceTo(testworldVecCirc);
+					tempDist.push({
+						"dist": difDist,
+						"pos": testworldVecCirc
+					});
+				}
+
+				tempDist.sort(function(a, b) {
+				    return a.dist - b.dist;
+				});
+				destPos = tempDist[0].pos;
+				destPos.z -= sphere.position.z;
+				destPos.x += Math.random() - 0.5;
+				destPos.y += Math.random() - 0.5;
+
+				pointNeedToMove[i].position = testVecPoint.clone();
+
+				TweenMax.to(pointNeedToMove[i].position, .5, {x: destPos.x, y: destPos.y, z: destPos.z, ease: Back.easeOut, delay: Math.random() * 0.1});
+			}
+
+			lastPointHover = obj.position;
+		}
+	}
+
+	function resetPointsPos() {
+		for (var i = 0; i < circlOnPoint.length; i++) {
+			circlOnPoint[i].material.dispose();
+			circlOnPoint[i].geometry.dispose();
+			scene.remove(circlOnPoint[i]);
+		}
+		for (var i = 0; i < pointNeedToMove.length; i++) {
+			var point = pointNeedToMove[i];
+
+			TweenMax.to(point.position, .5, {x: point.defaultPos.x, y: point.defaultPos.y, z: point.defaultPos.z, ease: Back.easeOut });
+
+			// pointNeedToMove.splice(i, 1);
+		}
+		lastPointHover = "";
+		CONTROLS.autoRotate = true;
 	}
 
 });
